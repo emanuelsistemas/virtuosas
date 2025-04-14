@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Search, Moon, Sun } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import { supabase } from '../supabase';
@@ -19,6 +19,8 @@ function RegistrationForm() {
     whatsappContato: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSearchingCep, setIsSearchingCep] = useState(false);
+  const numeroInputRef = useRef<HTMLInputElement>(null);
 
   const formatCPF = (value: string) => {
     return value
@@ -58,6 +60,57 @@ function RegistrationForm() {
       setFormData({ ...formData, [name]: value.replace(/\D/g, '') });
     } else {
       setFormData({ ...formData, [name]: value });
+    }
+  };
+
+  const searchCep = async () => {
+    if (formData.cep.length < 8) {
+      toast.error('Por favor, digite um CEP válido');
+      return;
+    }
+
+    setIsSearchingCep(true);
+
+    try {
+      // Remove non-numeric characters and format as expected by the API
+      const cepNumbers = formData.cep.replace(/\D/g, '');
+      
+      // Check if we have enough digits
+      if (cepNumbers.length !== 8) {
+        toast.error('CEP deve conter 8 dígitos');
+        return;
+      }
+
+      const response = await fetch(`https://viacep.com.br/ws/${cepNumbers}/json/`);
+      const data = await response.json();
+
+      if (data.erro) {
+        toast.error('CEP não encontrado');
+        return;
+      }
+
+      // Update form with address data
+      setFormData(prev => ({
+        ...prev,
+        endereco: data.logradouro,
+        bairro: data.bairro,
+        cidade: data.localidade,
+        estado: data.uf
+      }));
+
+      // Focus on the número field
+      setTimeout(() => {
+        if (numeroInputRef.current) {
+          numeroInputRef.current.focus();
+        }
+      }, 100);
+
+      toast.success('Endereço preenchido com sucesso');
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+      toast.error('Erro ao buscar CEP. Verifique sua conexão.');
+    } finally {
+      setIsSearchingCep(false);
     }
   };
 
@@ -164,14 +217,14 @@ function RegistrationForm() {
           </button>
         </div>
 
-        <div className={`max-w-2xl mx-auto ${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl p-8`}>
-          <div className="text-center mb-8">
-            <h1 className="font-['Great_Vibes'] text-5xl mb-2 bg-gradient-to-r from-pink-400 to-purple-500 text-transparent bg-clip-text">Virtuosas</h1>
-            <h2 className="font-['Playfair_Display'] text-2xl text-pink-300">Cadastro</h2>
+        <div className={`max-w-2xl mx-auto ${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl p-4 sm:p-6 md:p-8`}>
+          <div className="text-center mb-6 md:mb-8">
+            <h1 className="font-['Great_Vibes'] text-4xl sm:text-5xl mb-2 bg-gradient-to-r from-pink-400 to-purple-500 text-transparent bg-clip-text">Virtuosas</h1>
+            <h2 className="font-['Playfair_Display'] text-xl sm:text-2xl text-pink-300">Cadastro</h2>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               <div className="col-span-2">
                 <input
                   type="text"
@@ -184,7 +237,7 @@ function RegistrationForm() {
                 />
               </div>
 
-              <div>
+              <div className="col-span-1 sm:col-span-1">
                 <input
                   type="tel"
                   inputMode="numeric"
@@ -198,7 +251,7 @@ function RegistrationForm() {
                 />
               </div>
 
-              <div className="relative">
+              <div className="col-span-1 sm:col-span-1 relative">
                 <input
                   type="tel"
                   inputMode="numeric"
@@ -210,7 +263,14 @@ function RegistrationForm() {
                   maxLength={10}
                   required
                 />
-                <Search className={`absolute right-3 top-2.5 w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-pink-400'}`} />
+                <button
+                  type="button"
+                  onClick={searchCep}
+                  disabled={isSearchingCep || formData.cep.length < 8}
+                  className="absolute right-3 top-2.5 cursor-pointer"
+                >
+                  <Search className={`w-5 h-5 ${isSearchingCep ? 'text-gray-500' : isDarkMode ? 'text-gray-400' : 'text-pink-400'}`} />
+                </button>
               </div>
 
               <div className="col-span-2">
@@ -225,7 +285,7 @@ function RegistrationForm() {
                 />
               </div>
 
-              <div>
+              <div className="col-span-1 sm:col-span-1">
                 <input
                   type="tel"
                   inputMode="numeric"
@@ -235,10 +295,11 @@ function RegistrationForm() {
                   value={formData.numero}
                   onChange={handleInputChange}
                   required
+                  ref={numeroInputRef}
                 />
               </div>
 
-              <div>
+              <div className="col-span-1 sm:col-span-1">
                 <input
                   type="text"
                   name="bairro"
@@ -250,7 +311,7 @@ function RegistrationForm() {
                 />
               </div>
 
-              <div>
+              <div className="col-span-1 sm:col-span-1">
                 <input
                   type="text"
                   name="cidade"
@@ -262,7 +323,7 @@ function RegistrationForm() {
                 />
               </div>
 
-              <div>
+              <div className="col-span-1 sm:col-span-1">
                 <input
                   type="text"
                   name="estado"
@@ -291,7 +352,7 @@ function RegistrationForm() {
 
               {estadoCivil && (
                 <>
-                  <div>
+                  <div className="col-span-1 sm:col-span-1">
                     <input
                       type="text"
                       name="nomeContato"
@@ -302,7 +363,7 @@ function RegistrationForm() {
                       required
                     />
                   </div>
-                  <div>
+                  <div className="col-span-1 sm:col-span-1">
                     <input
                       type="tel"
                       inputMode="numeric"
@@ -318,18 +379,17 @@ function RegistrationForm() {
                 </>
               )}
             </div>
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className={`w-full py-3 rounded-lg ${
-                isDarkMode 
-                  ? 'bg-pink-500 hover:bg-pink-600 text-white' 
-                  : 'bg-pink-400 hover:bg-pink-500 text-white'
-              } font-medium transition-colors duration-200 transform focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              {isSubmitting ? 'Cadastrando...' : 'Cadastrar'}
-            </button>
+<button
+  type="submit"
+  disabled={isSubmitting}
+  className={`w-full py-2 sm:py-3 rounded-lg ${
+    isDarkMode
+      ? 'bg-pink-500 hover:bg-pink-600 text-white'
+      : 'bg-pink-400 hover:bg-pink-500 text-white'
+  } font-medium transition-colors duration-200 transform focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed`}
+>
+  {isSubmitting ? 'Cadastrando...' : 'Cadastrar'}
+</button>
           </form>
         </div>
       </div>
