@@ -207,37 +207,37 @@ function RegistrationForm() {
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-pink-50' : 'bg-pink-50 text-gray-900'} transition-colors duration-300`}>
       <Toaster position="top-center" />
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-end mb-6">
-          <button
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className={`p-2 rounded-full ${isDarkMode ? 'bg-gray-800 text-pink-300' : 'bg-pink-100 text-gray-800'}`}
-          >
-            {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
-          </button>
-        </div>
-
-        <div className={`max-w-2xl mx-auto ${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl p-4 sm:p-6 md:p-8`}>
-          <div className="text-center mb-6 md:mb-8">
-            <h1 className="font-['Great_Vibes'] text-4xl sm:text-5xl mb-2 bg-gradient-to-r from-pink-400 to-purple-500 text-transparent bg-clip-text">Virtuosas</h1>
-            <h2 className="font-['Playfair_Display'] text-xl sm:text-2xl text-pink-300">Cadastro</h2>
+      <div className="container mx-auto px-4 py-6">
+        <div className={`max-w-2xl mx-auto ${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl p-4 sm:p-6 md:p-8 relative`}>
+          <div className="absolute right-4 top-4 sm:right-6 sm:top-6 z-10">
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className={`p-2 rounded-full ${isDarkMode ? 'bg-gray-700 text-pink-300 hover:bg-gray-600' : 'bg-pink-100 text-gray-800 hover:bg-pink-200'}`}
+              aria-label="Toggle dark mode"
+            >
+              {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
+            </button>
+          </div>
+          <div className="text-center mb-6 md:mb-8 pt-6">
+            <h1 className="font-['Great_Vibes'] text-5xl sm:text-6xl mb-2 bg-gradient-to-r from-pink-400 to-purple-500 text-transparent bg-clip-text">Virtuosas</h1>
+            <h2 className="font-['Playfair_Display'] text-2xl sm:text-3xl text-pink-300">Cadastro</h2>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               <div className="col-span-2">
                 <input
                   type="text"
                   name="nomeCompleto"
                   placeholder="Nome Completo *"
-                  className={`w-full px-4 py-2 rounded-lg ${isDarkMode ? 'bg-gray-700 focus:bg-gray-600' : 'bg-pink-50'} border ${isDarkMode ? 'border-gray-600' : 'border-pink-200'} focus:outline-none focus:border-pink-400`}
+                  className={`w-full px-4 py-3 text-base rounded-lg ${isDarkMode ? 'bg-gray-700 focus:bg-gray-600' : 'bg-pink-50'} border ${isDarkMode ? 'border-gray-600' : 'border-pink-200'} focus:outline-none focus:border-pink-400`}
                   value={formData.nomeCompleto}
                   onChange={handleInputChange}
                   required
                 />
               </div>
 
-              <div className="col-span-1 sm:col-span-1">
+              <div className="col-span-2">
                 <input
                   type="tel"
                   inputMode="numeric"
@@ -257,7 +257,7 @@ function RegistrationForm() {
                   inputMode="numeric"
                   name="cep"
                   placeholder="CEP *"
-                  className={`w-full px-4 py-2 rounded-lg ${isDarkMode ? 'bg-gray-700 focus:bg-gray-600' : 'bg-pink-50'} border ${isDarkMode ? 'border-gray-600' : 'border-pink-200'} focus:outline-none focus:border-pink-400 pr-10`}
+                  className={`w-full px-4 py-3 text-base rounded-lg ${isDarkMode ? 'bg-gray-700 focus:bg-gray-600' : 'bg-pink-50'} border ${isDarkMode ? 'border-gray-600' : 'border-pink-200'} focus:outline-none focus:border-pink-400 pr-10`}
                   value={formData.cep}
                   onChange={handleInputChange}
                   maxLength={10}
@@ -267,7 +267,7 @@ function RegistrationForm() {
                   type="button"
                   onClick={searchCep}
                   disabled={isSearchingCep || formData.cep.length < 8}
-                  className="absolute right-3 top-2.5 cursor-pointer"
+                  className="absolute right-3 top-3.5 cursor-pointer"
                 >
                   <Search className={`w-5 h-5 ${isSearchingCep ? 'text-gray-500' : isDarkMode ? 'text-gray-400' : 'text-pink-400'}`} />
                 </button>
@@ -285,7 +285,7 @@ function RegistrationForm() {
                 />
               </div>
 
-              <div className="col-span-1 sm:col-span-1">
+              <div className="col-span-2">
                 <input
                   type="tel"
                   inputMode="numeric"
@@ -299,7 +299,7 @@ function RegistrationForm() {
                 />
               </div>
 
-              <div className="col-span-1 sm:col-span-1">
+              <div className="col-span-2">
                 <input
                   type="text"
                   name="bairro"
@@ -311,7 +311,7 @@ function RegistrationForm() {
                 />
               </div>
 
-              <div className="col-span-1 sm:col-span-1">
+              <div className="col-span-2">
                 <input
                   type="text"
                   name="cidade"
@@ -323,7 +323,7 @@ function RegistrationForm() {
                 />
               </div>
 
-              <div className="col-span-1 sm:col-span-1">
+              <div className="col-span-2">
                 <input
                   type="text"
                   name="estado"
@@ -340,7 +340,7 @@ function RegistrationForm() {
                   name="estadoCivil"
                   value={estadoCivil}
                   onChange={(e) => setEstadoCivil(e.target.value)}
-                  className={`w-full px-4 py-2 rounded-lg ${isDarkMode ? 'bg-gray-700 focus:bg-gray-600' : 'bg-pink-50'} border ${isDarkMode ? 'border-gray-600' : 'border-pink-200'} focus:outline-none focus:border-pink-400`}
+                  className={`w-full px-4 py-3 text-base rounded-lg ${isDarkMode ? 'bg-gray-700 focus:bg-gray-600' : 'bg-pink-50'} border ${isDarkMode ? 'border-gray-600' : 'border-pink-200'} focus:outline-none focus:border-pink-400`}
                   required
                 >
                   <option value="">Selecione o Estado Civil *</option>
@@ -352,7 +352,7 @@ function RegistrationForm() {
 
               {estadoCivil && (
                 <>
-                  <div className="col-span-1 sm:col-span-1">
+                  <div className="col-span-2">
                     <input
                       type="text"
                       name="nomeContato"
@@ -363,7 +363,7 @@ function RegistrationForm() {
                       required
                     />
                   </div>
-                  <div className="col-span-1 sm:col-span-1">
+                  <div className="col-span-2">
                     <input
                       type="tel"
                       inputMode="numeric"
@@ -382,14 +382,29 @@ function RegistrationForm() {
 <button
   type="submit"
   disabled={isSubmitting}
-  className={`w-full py-2 sm:py-3 rounded-lg ${
+  className={`w-full py-3 sm:py-4 text-lg rounded-lg ${
     isDarkMode
       ? 'bg-pink-500 hover:bg-pink-600 text-white'
       : 'bg-pink-400 hover:bg-pink-500 text-white'
-  } font-medium transition-colors duration-200 transform focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed`}
+  } font-medium transition-colors duration-200 transform focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed mt-4`}
 >
   {isSubmitting ? 'Cadastrando...' : 'Cadastrar'}
 </button>
+
+<div className="mt-8 text-center text-sm opacity-80">
+  Desenvolvido por <a 
+    href="https://emasoftware.io" 
+    target="_blank" 
+    rel="noopener noreferrer"
+    className="hover:underline"
+  >
+    <span 
+      className="font-['MuseoModerno',_sans-serif] font-semibold tracking-wide inline-block animate-pulse bg-gradient-to-r from-pink-400 to-purple-500 bg-clip-text text-transparent"
+    >
+      ema-software
+    </span>
+  </a>
+</div>
           </form>
         </div>
       </div>
