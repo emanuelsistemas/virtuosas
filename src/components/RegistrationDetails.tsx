@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Moon, Sun, Copy, ArrowLeft, Check } from 'lucide-react';
+import { Moon, Sun, Copy, ArrowLeft, Check, CreditCard, Trash2, Send } from 'lucide-react';
 import { supabase } from '../supabase';
 import { Toaster, toast } from 'react-hot-toast';
 
@@ -18,6 +18,7 @@ interface Registration {
   nome_contato: string;
   whatsapp_contato: string;
   verified: boolean;
+  payment_method: string | null;
 }
 
 function RegistrationDetails() {
@@ -25,6 +26,9 @@ function RegistrationDetails() {
   const [registration, setRegistration] = useState<Registration | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isUpdatingPayment, setIsUpdatingPayment] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -50,6 +54,49 @@ function RegistrationDetails() {
     }
   };
 
+  const handlePaymentMethodChange = async (method: string | null) => {
+    if (!registration || isUpdatingPayment) return;
+    
+    setIsUpdatingPayment(true);
+    try {
+      const { error } = await supabase
+        .from('registrations')
+        .update({ payment_method: method })
+        .eq('id', registration.id);
+
+      if (error) throw error;
+
+      setRegistration(prev => prev ? { ...prev, payment_method: method } : null);
+      toast.success(method ? `Método de pagamento atualizado para ${method}` : 'Método de pagamento removido');
+    } catch (error) {
+      console.error('Erro ao atualizar método de pagamento:', error);
+      toast.error('Erro ao atualizar método de pagamento');
+    } finally {
+      setIsUpdatingPayment(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!registration || isDeleting) return;
+    
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('registrations')
+        .delete()
+        .eq('id', registration.id);
+
+      if (error) throw error;
+
+      toast.success('Cadastro excluído com sucesso');
+      navigate('/admin');
+    } catch (error) {
+      console.error('Erro ao excluir cadastro:', error);
+      toast.error('Erro ao excluir cadastro');
+      setIsDeleting(false);
+    }
+  };
+
   const handleVerify = async () => {
     if (!registration) return;
     
@@ -57,11 +104,9 @@ function RegistrationDetails() {
     console.log('Iniciando processo de verificação para ID:', registration.id);
     
     try {
-      // Usando uma abordagem mais direta e explícita
       const updateData = { verified: true };
       console.log('Dados a serem atualizados:', updateData);
       
-      // Executar o update com técnica garantida
       const { data, error } = await supabase
         .from('registrations')
         .update(updateData)
@@ -82,7 +127,6 @@ function RegistrationDetails() {
       
       console.log('Dados após atualização:', data);
       
-      // Forçar nova consulta ao banco para confirmar a atualização
       const { data: verifyData, error: verifyError } = await supabase
         .from('registrations')
         .select('*')
@@ -101,7 +145,6 @@ function RegistrationDetails() {
         throw new Error('A atualização não foi persistida no banco de dados');
       }
       
-      // Atualizar o estado local com os dados confirmados do banco
       setRegistration(verifyData);
       toast.success('Cadastro marcado como conferido!');
     } catch (error) {
@@ -212,6 +255,75 @@ function RegistrationDetails() {
             {renderField('Nome do Contato', registration.nome_contato)}
             {renderField('WhatsApp do Contato', registration.whatsapp_contato)}
 
+            {/* Método de Pagamento */}
+            <div className="mt-6 mb-4">
+              <label className={`block text-sm sm:text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-2`}>
+                Método de Pagamento
+              </label>
+              <div className="flex gap-3 flex-wrap">
+                <button
+                  onClick={() => handlePaymentMethodChange('Boleto')}
+                  className={`flex-1 py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors ${
+                    registration.payment_method === 'Boleto'
+                      ? isDarkMode
+                        ? 'bg-pink-500 text-white'
+                        : 'bg-pink-400 text-white'
+                      : isDarkMode
+                      ? 'bg-gray-700 hover:bg-gray-600'
+                      : 'bg-pink-100 hover:bg-pink-200'
+                  }`}
+                  disabled={isUpdatingPayment}
+                >
+                  <CreditCard className="w-5 h-5" />
+                  Boleto
+                </button>
+                <button
+                  onClick={() => handlePaymentMethodChange('Boleto Enviado')}
+                  className={`flex-1 py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors ${
+                    registration.payment_method === 'Boleto Enviado'
+                      ? isDarkMode
+                        ? 'bg-green-500 text-white'
+                        : 'bg-green-400 text-white'
+                      : isDarkMode
+                      ? 'bg-gray-700 hover:bg-gray-600'
+                      : 'bg-pink-100 hover:bg-pink-200'
+                  }`}
+                  disabled={isUpdatingPayment}
+                >
+                  <Send className="w-5 h-5" />
+                  Boleto Enviado
+                </button>
+                <button
+                  onClick={() => handlePaymentMethodChange('Cartão')}
+                  className={`flex-1 py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors ${
+                    registration.payment_method === 'Cartão'
+                      ? isDarkMode
+                        ? 'bg-pink-500 text-white'
+                        : 'bg-pink-400 text-white'
+                      : isDarkMode
+                      ? 'bg-gray-700 hover:bg-gray-600'
+                      : 'bg-pink-100 hover:bg-pink-200'
+                  }`}
+                  disabled={isUpdatingPayment}
+                >
+                  <CreditCard className="w-5 h-5" />
+                  Cartão
+                </button>
+              </div>
+              {registration.payment_method && (
+                <button
+                  onClick={() => handlePaymentMethodChange(null)}
+                  className={`mt-2 w-full py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors ${
+                    isDarkMode ? 'bg-red-500 hover:bg-red-600' : 'bg-red-400 hover:bg-red-500'
+                  } text-white`}
+                  disabled={isUpdatingPayment}
+                >
+                  <Trash2 className="w-5 h-5" />
+                  Remover método de pagamento
+                </button>
+              )}
+            </div>
+
             {!registration.verified && (
               <button
                 onClick={handleVerify}
@@ -245,6 +357,47 @@ function RegistrationDetails() {
                   Voltar para a lista
                 </button>
               </>
+            )}
+
+            {/* Botão de Excluir Cadastro */}
+            <div className="mt-8 pt-6 border-t border-gray-700">
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className={`w-full py-3 rounded-lg flex items-center justify-center gap-2 ${
+                  isDarkMode ? 'bg-red-500 hover:bg-red-600' : 'bg-red-400 hover:bg-red-500'
+                } text-white transition-colors`}
+                disabled={isDeleting}
+              >
+                <Trash2 className="w-5 h-5" />
+                {isDeleting ? 'Excluindo...' : 'Excluir Cadastro'}
+              </button>
+            </div>
+
+            {/* Modal de Confirmação */}
+            {showDeleteConfirm && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-6 max-w-md w-full`}>
+                  <h3 className="text-xl font-semibold mb-4">Confirmar Exclusão</h3>
+                  <p className="mb-6">Tem certeza que deseja excluir este cadastro? Esta ação não pode ser desfeita.</p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className={`flex-1 py-2 rounded-lg ${
+                        isDarkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-200 hover:bg-gray-300'
+                      } transition-colors`}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      className="flex-1 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors"
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? 'Excluindo...' : 'Confirmar Exclusão'}
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>
