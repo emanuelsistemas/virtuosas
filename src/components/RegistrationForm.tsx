@@ -379,32 +379,32 @@ function RegistrationForm() {
                 </>
               )}
             </div>
-<button
-  type="submit"
-  disabled={isSubmitting}
-  className={`w-full py-3 sm:py-4 text-lg rounded-lg ${
-    isDarkMode
-      ? 'bg-pink-500 hover:bg-pink-600 text-white'
-      : 'bg-pink-400 hover:bg-pink-500 text-white'
-  } font-medium transition-colors duration-200 transform focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed mt-4`}
->
-  {isSubmitting ? 'Cadastrando...' : 'Cadastrar'}
-</button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={`w-full py-3 sm:py-4 text-lg rounded-lg ${
+                isDarkMode
+                  ? 'bg-pink-500 hover:bg-pink-600 text-white'
+                  : 'bg-pink-400 hover:bg-pink-500 text-white'
+              } font-medium transition-colors duration-200 transform focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed mt-4`}
+            >
+              {isSubmitting ? 'Cadastrando...' : 'Cadastrar'}
+            </button>
 
-<div className="mt-8 text-center text-sm opacity-80">
-  Desenvolvido por <a 
-    href="https://emasoftware.io" 
-    target="_blank" 
-    rel="noopener noreferrer"
-    className="hover:underline"
-  >
-    <span 
-      className="font-['MuseoModerno',_sans-serif] font-semibold tracking-wide inline-block animate-pulse bg-gradient-to-r from-pink-400 to-purple-500 bg-clip-text text-transparent"
-    >
-      ema-software
-    </span>
-  </a>
-</div>
+            <div className="mt-8 text-center text-sm opacity-80">
+              Desenvolvido por <a 
+                href="https://emasoftware.app" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="hover:underline"
+              >
+                <span 
+                  className="font-['MuseoModerno',_sans-serif] font-semibold tracking-wide inline-block animate-pulse bg-gradient-to-r from-pink-400 to-purple-500 bg-clip-text text-transparent"
+                >
+                  ema-software
+                </span>
+              </a>
+            </div>
           </form>
         </div>
       </div>
