@@ -22,7 +22,11 @@ function AdminPanel() {
   const [totalRegistrations, setTotalRegistrations] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRegistrationClosed, setIsRegistrationClosed] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'verified' | 'boleto' | 'cartao' | 'boleto-enviado'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'verified' | 'boleto' | 'cartao' | 'boleto-enviado'>(() => {
+    // Recuperar filtro salvo do localStorage, se existir
+    const savedFilter = localStorage.getItem('adminPanelFilter');
+    return savedFilter ? savedFilter as 'all' | 'pending' | 'verified' | 'boleto' | 'cartao' | 'boleto-enviado' : 'all';
+  });
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -31,6 +35,11 @@ function AdminPanel() {
     fetchTotalRegistrationsCount();
     fetchRegistrationStatus();
   }, [filterStatus, location]);
+
+  // Save filter status to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('adminPanelFilter', filterStatus);
+  }, [filterStatus]);
 
   const fetchRegistrationStatus = async () => {
     try {
@@ -109,9 +118,24 @@ function AdminPanel() {
 
   const fetchTotalRegistrationsCount = async () => {
     try {
-      const { error, count } = await supabase
+      let query = supabase
         .from('registrations')
         .select('*', { count: 'exact', head: true });
+      
+      // Aplicar o mesmo filtro usado em fetchRegistrations
+      if (filterStatus === 'pending') {
+        query = query.eq('verified', false);
+      } else if (filterStatus === 'verified') {
+        query = query.eq('verified', true);
+      } else if (filterStatus === 'boleto') {
+        query = query.eq('payment_method', 'Boleto');
+      } else if (filterStatus === 'cartao') {
+        query = query.eq('payment_method', 'Cartão');
+      } else if (filterStatus === 'boleto-enviado') {
+        query = query.eq('payment_method', 'Boleto Enviado');
+      }
+
+      const { error, count } = await query;
 
       if (error) throw error;
       setTotalRegistrations(count || 0);
@@ -201,7 +225,15 @@ function AdminPanel() {
             <div className="flex items-center">
               <Users className="w-6 h-6 mr-2 text-pink-400" />
               <div>
-                <span className="text-lg font-semibold">Total de Cadastros: {totalRegistrations}</span>
+                <span className="text-lg font-semibold">
+                  {filterStatus === 'all' && 'Total de Cadastros'}
+                  {filterStatus === 'pending' && 'Total de Pendentes'}
+                  {filterStatus === 'verified' && 'Total de Conferidos'}
+                  {filterStatus === 'boleto' && 'Total de Boleto'}
+                  {filterStatus === 'cartao' && 'Total de Cartão'}
+                  {filterStatus === 'boleto-enviado' && 'Total de Boleto Enviado'}
+                  : {totalRegistrations}
+                </span>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -225,7 +257,12 @@ function AdminPanel() {
               </div>
               <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)}
+                onChange={(e) => {
+                  const newFilterStatus = e.target.value as typeof filterStatus;
+                  // Salvar o filtro no localStorage
+                  localStorage.setItem('adminPanelFilter', newFilterStatus);
+                  setFilterStatus(newFilterStatus);
+                }}
                 className={`px-4 py-2 text-base rounded-lg ${
                   isDarkMode ? 'bg-gray-600 text-white' : 'bg-white text-gray-900'
                 } border ${isDarkMode ? 'border-gray-500' : 'border-pink-200'} focus:outline-none focus:border-pink-400`}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Moon, Sun, Copy, ArrowLeft, Check, CreditCard, Trash2, Send, Edit, Save } from 'lucide-react';
+import { Moon, Sun, Copy, ArrowLeft, Check, CreditCard, Trash2, Send, Edit, Save, Phone } from 'lucide-react';
 import { supabase } from '../supabase';
 import { Toaster, toast } from 'react-hot-toast';
 
@@ -35,6 +35,13 @@ function RegistrationDetails() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
+  
+  // Função para navegar de volta para a lista mantendo o filtro
+  const goBackToAdmin = () => {
+    // O localStorage já contém o filtro salvo, não precisamos fazer nada especial aqui
+    // O AdminPanel irá carregar o filtro do localStorage automaticamente
+    navigate('/admin');
+  };
 
   useEffect(() => {
     fetchRegistrationDetails();
@@ -93,7 +100,7 @@ function RegistrationDetails() {
       if (error) throw error;
 
       toast.success('Cadastro excluído com sucesso');
-      navigate('/admin');
+      goBackToAdmin();
     } catch (error) {
       console.error('Erro ao excluir cadastro:', error);
       toast.error('Erro ao excluir cadastro');
@@ -105,19 +112,18 @@ function RegistrationDetails() {
     if (!registration) return;
     
     setIsVerifying(true);
-    console.log('Iniciando processo de verificação para ID:', registration.id);
+    // Alternar o status - se estiver verificado, marca como não verificado e vice-versa
+    const newStatus = !registration.verified;
+    console.log(`Alterando status para: ${newStatus ? 'Conferido' : 'Pendente'} - ID:`, registration.id);
     
     try {
-      const updateData = { verified: true };
-      console.log('Dados a serem atualizados:', updateData);
+      const updateData = { verified: newStatus };
       
       const { data, error } = await supabase
         .from('registrations')
         .update(updateData)
         .match({ id: registration.id })
         .select();
-      
-      console.log('Resposta da API:', { data, error });
       
       if (error) {
         console.error('Erro na atualização:', error);
@@ -129,8 +135,7 @@ function RegistrationDetails() {
         throw new Error('Atualização não retornou confirmação');
       }
       
-      console.log('Dados após atualização:', data);
-      
+      // Verificar se a atualização foi bem-sucedida
       const { data: verifyData, error: verifyError } = await supabase
         .from('registrations')
         .select('*')
@@ -142,18 +147,19 @@ function RegistrationDetails() {
         throw new Error(`Falha ao verificar atualização: ${verifyError.message}`);
       }
       
-      console.log('Dados verificados após atualização:', verifyData);
-      
-      if (!verifyData.verified) {
-        console.error('Verificação falhou: campo ainda é FALSE após update');
-        throw new Error('A atualização não foi persistida no banco de dados');
+      // Verificar se o status foi atualizado corretamente
+      if (verifyData.verified !== newStatus) {
+        console.error(`Atualização falhou: status deveria ser ${newStatus} mas é ${verifyData.verified}`);
+        throw new Error('A atualização não foi persistida corretamente no banco de dados');
       }
       
       setRegistration(verifyData);
-      toast.success('Cadastro marcado como conferido!');
+      toast.success(newStatus 
+        ? 'Cadastro marcado como conferido!' 
+        : 'Cadastro marcado como pendente!');
     } catch (error) {
       console.error('Erro completo:', error);
-      toast.error(`Erro ao marcar cadastro como conferido: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      toast.error(`Erro ao atualizar status do cadastro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     } finally {
       setIsVerifying(false);
     }
@@ -162,6 +168,25 @@ function RegistrationDetails() {
   const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${field} copiado com sucesso!`);
+  };
+  
+  // Função para abrir o WhatsApp
+  const openWhatsApp = (phoneNumber: string) => {
+    // Remover todos os caracteres não numéricos
+    const formattedNumber = phoneNumber.replace(/\D/g, '');
+    
+    // Se começar com 0, remover o zero inicial
+    const finalNumber = formattedNumber.startsWith('0') 
+      ? formattedNumber.substring(1) 
+      : formattedNumber;
+    
+    // Se não tiver o código do país, adicionar o do Brasil
+    const fullNumber = finalNumber.startsWith('55') 
+      ? finalNumber 
+      : `55${finalNumber}`;
+    
+    // Abrir o WhatsApp
+    window.open(`https://wa.me/${fullNumber}`, '_blank');
   };
 
   const toggleEditMode = (field: string, value: string) => {
@@ -277,6 +302,9 @@ function RegistrationDetails() {
     // Importante: O operador || não é bom aqui porque valores vazios seriam revertidos para o original
     const currentValue = isEditing && label in editableFields ? editableFields[label] : value;
     
+    // Verificar se é um campo de WhatsApp
+    const isWhatsAppField = label === 'WhatsApp do Participante' || label === 'WhatsApp do Contato';
+    
     return (
       <div className="mb-5">
         <label className={`block text-sm sm:text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-1.5`}>
@@ -315,6 +343,19 @@ function RegistrationDetails() {
           >
             <Copy className="w-5 h-5" />
           </button>
+          
+          {/* Botão de WhatsApp (apenas para campos de WhatsApp) */}
+          {isWhatsAppField && value && value !== '-' && (
+            <button
+              onClick={() => openWhatsApp(value)}
+              className={`ml-2 p-2.5 rounded-lg ${
+                isDarkMode ? 'bg-green-700 hover:bg-green-600' : 'bg-green-500 hover:bg-green-600'
+              } transition-colors shrink-0`}
+              aria-label={`Abrir ${label} no WhatsApp`}
+            >
+              <Phone className="w-5 h-5 text-white" />
+            </button>
+          )}
         </div>
       </div>
     );
@@ -467,7 +508,12 @@ function RegistrationDetails() {
                 } text-white font-medium transition-colors duration-200 transform focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center`}
               >
                 <Check className="w-5 h-5 mr-2" />
-                {isVerifying ? 'Conferindo...' : 'Marcar como Conferido'}
+                {isVerifying 
+                  ? 'Atualizando...' 
+                  : registration.verified 
+                    ? 'Marcar como Pendente' 
+                    : 'Marcar como Conferido'
+                }
               </button>
             )}
 
