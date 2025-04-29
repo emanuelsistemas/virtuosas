@@ -8,6 +8,7 @@ interface Registration {
   id: string;
   nome_completo: string;
   cpf: string;
+  whats_participante: string | null;
   cep: string;
   endereco: string;
   numero: string;
@@ -245,6 +246,7 @@ function RegistrationDetails() {
           <div className="space-y-6">
             {renderField('Nome Completo', registration.nome_completo)}
             {renderField('CPF', registration.cpf)}
+            {renderField('WhatsApp do Participante', registration.whats_participante || '-')}
             {renderField('CEP', registration.cep)}
             {renderField('Endereço', registration.endereco)}
             {renderField('Número', registration.numero)}

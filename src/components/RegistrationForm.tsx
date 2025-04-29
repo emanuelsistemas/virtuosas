@@ -11,6 +11,7 @@ function RegistrationForm() {
   const [formData, setFormData] = useState({
     nomeCompleto: '',
     cpf: '',
+    whatsParticipante: '',
     cep: '',
     endereco: '',
     numero: '',
@@ -52,6 +53,42 @@ function RegistrationForm() {
       .replace(/(\d{3})(\d{1,2})/, '$1-$2')
       .slice(0, 14);
   };
+  
+  // Função para validar CPF de acordo com as regras da Receita Federal
+  const isValidCPF = (cpf: string): boolean => {
+    // Remover caracteres não numéricos
+    const cleanCPF = cpf.replace(/[^0-9]/g, '');
+    
+    // Verificar se tem 11 dígitos
+    if (cleanCPF.length !== 11) return false;
+    
+    // Verificar se todos os dígitos são iguais (CPF inválido, mas com formato correto)
+    if (/^(\d)\1+$/.test(cleanCPF)) return false;
+    
+    // Validação do primeiro dígito verificador
+    let sum = 0;
+    for (let i = 0; i < 9; i++) {
+      sum += parseInt(cleanCPF.charAt(i)) * (10 - i);
+    }
+    
+    let remainder = sum % 11;
+    let digit1 = remainder < 2 ? 0 : 11 - remainder;
+    
+    // Validação do segundo dígito verificador
+    sum = 0;
+    for (let i = 0; i < 10; i++) {
+      sum += parseInt(cleanCPF.charAt(i)) * (11 - i);
+    }
+    
+    remainder = sum % 11;
+    let digit2 = remainder < 2 ? 0 : 11 - remainder;
+    
+    // Verificar se os dígitos verificadores estão corretos
+    return (
+      parseInt(cleanCPF.charAt(9)) === digit1 && 
+      parseInt(cleanCPF.charAt(10)) === digit2
+    );
+  };
 
   const formatCEP = (value: string) => {
     return value
@@ -76,7 +113,7 @@ function RegistrationForm() {
       setFormData({ ...formData, [name]: formatCPF(value) });
     } else if (name === 'cep') {
       setFormData({ ...formData, [name]: formatCEP(value) });
-    } else if (name === 'whatsappContato') {
+    } else if (name === 'whatsappContato' || name === 'whatsParticipante') {
       setFormData({ ...formData, [name]: formatWhatsApp(value) });
     } else if (name === 'numero') {
       setFormData({ ...formData, [name]: value.replace(/\D/g, '') });
@@ -153,6 +190,7 @@ function RegistrationForm() {
     setFormData({
       nomeCompleto: '',
       cpf: '',
+      whatsParticipante: '',
       cep: '',
       endereco: '',
       numero: '',
@@ -165,12 +203,33 @@ function RegistrationForm() {
     setEstadoCivil('');
   };
 
+  // Verificar se o CPF já existe no banco de dados
+  const checkExistingCPF = async (cpf: string): Promise<boolean> => {
+    try {
+      // Remove formatação do CPF, mas mantém a formatação para a consulta 
+      // já que é assim que está armazenado no banco
+      
+      const { error, count } = await supabase
+        .from('registrations')
+        .select('id', { count: 'exact' })
+        .eq('cpf', cpf);
+        
+      if (error) throw error;
+      
+      return count ? count > 0 : false;
+    } catch (error) {
+      console.error('Erro ao verificar CPF:', error);
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const requiredFields = [
       'nomeCompleto',
       'cpf',
+      'whatsParticipante',
       'cep',
       'endereco',
       'numero',
@@ -195,6 +254,19 @@ function RegistrationForm() {
       toast.error('Por favor, preencha todos os campos obrigatórios');
       return;
     }
+    
+    // Verificar se o CPF é válido
+    if (!isValidCPF(formData.cpf)) {
+      toast.error('O CPF informado não é válido. Por favor, verifique e tente novamente.');
+      return;
+    }
+    
+    // Verificar se o CPF já está cadastrado
+    const cpfAlreadyExists = await checkExistingCPF(formData.cpf);
+    if (cpfAlreadyExists) {
+      toast.error('Este CPF já possui um cadastro no sistema. Não é permitido cadastrar o mesmo CPF mais de uma vez.');
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -216,6 +288,7 @@ function RegistrationForm() {
         {
           nome_completo: formData.nomeCompleto,
           cpf: formData.cpf,
+          whats_participante: formData.whatsParticipante,
           cep: formData.cep,
           endereco: formData.endereco,
           numero: formData.numero,
@@ -313,6 +386,20 @@ function RegistrationForm() {
                   value={formData.cpf}
                   onChange={handleInputChange}
                   maxLength={14}
+                  required
+                />
+              </div>
+
+              <div className="col-span-2">
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  name="whatsParticipante"
+                  placeholder="Seu Telefone/WhatsApp *"
+                  className={`w-full px-4 py-2 rounded-lg ${isDarkMode ? 'bg-gray-700 focus:bg-gray-600' : 'bg-pink-50'} border ${isDarkMode ? 'border-gray-600' : 'border-pink-200'} focus:outline-none focus:border-pink-400`}
+                  value={formData.whatsParticipante}
+                  onChange={handleInputChange}
+                  maxLength={16}
                   required
                 />
               </div>

@@ -9,6 +9,7 @@ interface Registration {
   id: string;
   nome_completo: string;
   cpf: string;
+  whats_participante: string | null;
   verified: boolean;
   created_at: string;
   sequence_number: number;
@@ -123,7 +124,7 @@ function AdminPanel() {
     try {
       let query = supabase
         .from('registrations')
-        .select('id, nome_completo, cpf, verified, created_at, sequence_number, payment_method')
+        .select('id, nome_completo, cpf, whats_participante, verified, created_at, sequence_number, payment_method')
         .order('created_at', { ascending: false });
 
       if (filterStatus === 'pending') {
@@ -253,6 +254,7 @@ function AdminPanel() {
                       <th className="px-4 py-3 text-left w-16">#</th>
                       <th className="px-4 py-3 text-left">Nome Completo</th>
                       <th className="px-4 py-3 text-left">CPF</th>
+                      <th className="px-4 py-3 text-left">WhatsApp</th>
                       <th className="px-4 py-3 text-center">Status</th>
                       <th className="px-4 py-3 text-center">Pagamento</th>
                       <th className="px-4 py-3 text-center">Ações</th>
@@ -271,6 +273,7 @@ function AdminPanel() {
                         <td className="px-4 py-4 font-medium">{registrations.length - index}</td>
                         <td className="px-4 py-4">{registration.nome_completo}</td>
                         <td className="px-4 py-4">{registration.cpf}</td>
+                        <td className="px-4 py-4">{registration.whats_participante || '-'}</td>
                         <td className="px-4 py-4 text-center">
                           {registration.verified ? (
                             <span className="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800">
@@ -332,6 +335,7 @@ function AdminPanel() {
                         )}
                       </div>
                       <p className="text-sm opacity-80">{registration.cpf}</p>
+                      <p className="text-sm opacity-80">WhatsApp: {registration.whats_participante || '-'}</p>
                       <div className="mt-2 space-y-2">
                         {registration.payment_method && (
                           <div className="flex items-center">
