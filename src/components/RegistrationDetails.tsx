@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Moon, Sun, Copy, ArrowLeft, Check, CreditCard, Trash2, Send, Edit, Save, Phone } from 'lucide-react';
+import { Moon, Sun, Copy, ArrowLeft, Check, CreditCard, Trash2, Send, Edit, Save, Phone, Clock } from 'lucide-react';
 import { supabase } from '../supabase';
 import { Toaster, toast } from 'react-hot-toast';
 
@@ -497,45 +497,40 @@ function RegistrationDetails() {
               )}
             </div>
 
-            {!registration.verified && (
-              <button
-                onClick={handleVerify}
-                disabled={isVerifying}
-                className={`w-full py-3 sm:py-4 mt-6 rounded-lg text-lg ${
-                  isDarkMode 
-                    ? 'bg-green-500 hover:bg-green-600' 
-                    : 'bg-green-400 hover:bg-green-500'
-                } text-white font-medium transition-colors duration-200 transform focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center`}
-              >
+            {/* Botão para alternar o status */}
+            <button
+              onClick={handleVerify}
+              disabled={isVerifying}
+              className={`w-full py-3 sm:py-4 mt-6 rounded-lg text-lg ${
+                isDarkMode 
+                  ? registration.verified ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600'
+                  : registration.verified ? 'bg-yellow-400 hover:bg-yellow-500' : 'bg-green-400 hover:bg-green-500'
+              } text-white font-medium transition-colors duration-200 transform focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center`}
+            >
+              {registration.verified ? 
+                <Clock className="w-5 h-5 mr-2" /> : 
                 <Check className="w-5 h-5 mr-2" />
-                {isVerifying 
-                  ? 'Atualizando...' 
-                  : registration.verified 
-                    ? 'Marcar como Pendente' 
-                    : 'Marcar como Conferido'
-                }
-              </button>
-            )}
+              }
+              {isVerifying 
+                ? 'Atualizando...' 
+                : registration.verified 
+                  ? 'Marcar como Pendente' 
+                  : 'Marcar como Conferido'
+              }
+            </button>
 
-            {registration.verified && (
-              <>
-                <div className="mt-6 p-4 rounded-lg bg-green-100 text-green-800 flex items-center justify-center text-lg">
-                  <Check className="w-6 h-6 mr-2" />
-                  Cadastro já conferido
-                </div>
-                <button
-                  onClick={() => navigate('/admin')}
-                  className={`w-full py-3 sm:py-4 mt-4 rounded-lg text-lg ${
-                    isDarkMode 
-                      ? 'bg-pink-500 hover:bg-pink-600' 
-                      : 'bg-pink-400 hover:bg-pink-500'
-                  } text-white font-medium transition-colors duration-200 transform focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-opacity-50 flex items-center justify-center`}
-                >
-                  <ArrowLeft className="w-5 h-5 mr-2" />
-                  Voltar para a lista
-                </button>
-              </>
-            )}
+            {/* Botão de Voltar */}
+            <button
+              onClick={() => goBackToAdmin()}
+              className={`w-full py-3 sm:py-4 mt-4 rounded-lg text-lg ${
+                isDarkMode 
+                  ? 'bg-pink-500 hover:bg-pink-600' 
+                  : 'bg-pink-400 hover:bg-pink-500'
+              } text-white font-medium transition-colors duration-200 transform focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-opacity-50 flex items-center justify-center`}
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              Voltar para a lista
+            </button>
 
             {/* Botão de Excluir Cadastro */}
             <div className="mt-8 pt-6 border-t border-gray-700">
