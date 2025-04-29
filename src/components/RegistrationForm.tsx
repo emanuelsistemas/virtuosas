@@ -177,6 +177,19 @@ function RegistrationForm() {
     setIsSubmitting(true);
 
     try {
+      // Primeiro, obter o último sequence_number para incrementar
+      const { data: lastRecord, error: fetchError } = await supabase
+        .from('registrations')
+        .select('sequence_number')
+        .order('sequence_number', { ascending: false })
+        .limit(1);
+      
+      if (fetchError) throw fetchError;
+      
+      // Calcular o próximo sequence_number
+      const nextSequenceNumber = lastRecord && lastRecord.length > 0 ? lastRecord[0].sequence_number + 1 : 1;
+      
+      // Inserir o novo registro com o sequence_number
       const { error } = await supabase.from('registrations').insert([
         {
           nome_completo: formData.nomeCompleto,
@@ -189,7 +202,8 @@ function RegistrationForm() {
           estado: formData.estado,
           estado_civil: estadoCivil,
           nome_contato: formData.nomeContato,
-          whatsapp_contato: formData.whatsappContato
+          whatsapp_contato: formData.whatsappContato,
+          sequence_number: nextSequenceNumber
         }
       ]);
 
@@ -198,6 +212,7 @@ function RegistrationForm() {
       toast.success('Cadastro realizado com sucesso! Agradecemos seu contato.');
       resetForm();
     } catch (error) {
+      console.error('Erro no cadastro:', error);
       toast.error('Erro ao realizar cadastro. Por favor, tente novamente.');
     } finally {
       setIsSubmitting(false);
