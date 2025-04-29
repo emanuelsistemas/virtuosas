@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Moon, Sun, Copy, ArrowLeft, Check, CreditCard, Trash2, Send } from 'lucide-react';
+import { Moon, Sun, Copy, ArrowLeft, Check, CreditCard, Trash2, Send, Edit, Save } from 'lucide-react';
 import { supabase } from '../supabase';
 import { Toaster, toast } from 'react-hot-toast';
 
@@ -25,10 +25,13 @@ interface Registration {
 function RegistrationDetails() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [registration, setRegistration] = useState<Registration | null>(null);
+  const [editableFields, setEditableFields] = useState<Record<string, string>>({});
+  const [editingField, setEditingField] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isUpdatingPayment, setIsUpdatingPayment] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
@@ -161,34 +164,161 @@ function RegistrationDetails() {
     toast.success(`${field} copiado com sucesso!`);
   };
 
-  const renderField = (label: string, value: string) => (
-    <div className="mb-5">
-      <label className={`block text-sm sm:text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-1.5`}>
-        {label}
-      </label>
-      <div className="flex items-center">
-        <input
-          type="text"
-          readOnly
-          value={value}
-          className={`w-full px-4 py-3 text-base rounded-lg ${
-            isDarkMode ? 'bg-gray-700' : 'bg-pink-50'
-          } border ${
-            isDarkMode ? 'border-gray-600' : 'border-pink-200'
-          } focus:outline-none cursor-default`}
-        />
-        <button
-          onClick={() => copyToClipboard(value, label)}
-          className={`ml-2 p-2.5 rounded-lg ${
-            isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-pink-100 hover:bg-pink-200'
-          } transition-colors shrink-0`}
-          aria-label={`Copiar ${label}`}
-        >
-          <Copy className="w-5 h-5" />
-        </button>
+  const toggleEditMode = (field: string, value: string) => {
+    if (editingField === field) {
+      // Salvar alterações - importante não usar o operador || aqui para permitir campos vazios
+      saveFieldChange(field, field in editableFields ? editableFields[field] : value);
+    } else {
+      // Entrar no modo de edição
+      setEditableFields({ ...editableFields, [field]: value });
+      setEditingField(field);
+    }
+  };
+
+  const saveFieldChange = async (field: string, value: string) => {
+    if (!registration) return;
+    
+    setIsSaving(true);
+    try {
+      // Mapear o nome do campo do label para o nome da coluna no banco de dados
+      const fieldMap: Record<string, string> = {
+        'Nome Completo': 'nome_completo',
+        'CPF': 'cpf',
+        'WhatsApp do Participante': 'whats_participante',
+        'CEP': 'cep',
+        'Endereço': 'endereco',
+        'Número': 'numero',
+        'Bairro': 'bairro',
+        'Cidade': 'cidade',
+        'Estado': 'estado',
+        'Estado Civil': 'estado_civil',
+        'Nome do Contato': 'nome_contato',
+        'WhatsApp do Contato': 'whatsapp_contato'
+      };
+
+      const dbField = fieldMap[field];
+      if (!dbField) {
+        throw new Error(`Campo desconhecido: ${field}`);
+      }
+
+      // Criar objeto de atualização
+      const updateData = { [dbField]: value };
+      
+      const { error } = await supabase
+        .from('registrations')
+        .update(updateData)
+        .eq('id', registration.id);
+
+      if (error) throw error;
+
+      // Atualizar o estado local
+      setRegistration(prev => prev ? { ...prev, [dbField]: value } : null);
+      toast.success(`${field} atualizado com sucesso!`);
+      
+      // Sair do modo de edição
+      setEditingField(null);
+    } catch (error) {
+      console.error(`Erro ao atualizar ${field}:`, error);
+      toast.error(`Erro ao atualizar ${field}. Tente novamente.`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Funções de formatação
+  const formatCPF = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+      .slice(0, 14);
+  };
+
+  const formatCEP = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{2})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1-$2')
+      .slice(0, 10);
+  };
+
+  const formatWhatsApp = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d)(\d{4})/, '$1 $2')
+      .replace(/(\d{4})(\d)/, '$1-$2')
+      .slice(0, 16);
+  };
+
+  const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
+    
+    if (editingField) {
+      let formattedValue = value;
+      
+      // Aplicar formatação apropriada dependendo do tipo de campo
+      if (editingField === 'CPF') {
+        formattedValue = formatCPF(value);
+      } else if (editingField === 'CEP') {
+        formattedValue = formatCEP(value);
+      } else if (editingField === 'WhatsApp do Participante' || editingField === 'WhatsApp do Contato') {
+        formattedValue = formatWhatsApp(value);
+      }
+      
+      setEditableFields({ ...editableFields, [editingField]: formattedValue });
+    }
+  };
+
+  const renderField = (label: string, value: string) => {
+    const isEditing = editingField === label;
+    // Usar o valor editável se estiver editando, ou o valor original se não estiver
+    // Importante: O operador || não é bom aqui porque valores vazios seriam revertidos para o original
+    const currentValue = isEditing && label in editableFields ? editableFields[label] : value;
+    
+    return (
+      <div className="mb-5">
+        <label className={`block text-sm sm:text-base font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-1.5`}>
+          {label}
+        </label>
+        <div className="flex items-center">
+          <input
+            type="text"
+            readOnly={!isEditing}
+            value={currentValue}
+            onChange={handleFieldChange}
+            className={`w-full px-4 py-3 text-base rounded-lg ${
+              isDarkMode ? 'bg-gray-700' : 'bg-pink-50'
+            } border ${
+              isDarkMode ? 'border-gray-600' : 'border-pink-200'
+            } focus:outline-none ${isEditing ? 'cursor-text' : 'cursor-default'}`}
+          />
+          <button
+            onClick={() => toggleEditMode(label, value)}
+            disabled={isSaving}
+            className={`ml-2 p-2.5 rounded-lg ${
+              isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-pink-100 hover:bg-pink-200'
+            } transition-colors shrink-0 ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+            aria-label={isEditing ? `Salvar ${label}` : `Editar ${label}`}
+          >
+            {isEditing ? 
+              <Save className="w-5 h-5 text-green-500" /> : 
+              <Edit className="w-5 h-5" />}
+          </button>
+          <button
+            onClick={() => copyToClipboard(value, label)}
+            className={`ml-2 p-2.5 rounded-lg ${
+              isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-pink-100 hover:bg-pink-200'
+            } transition-colors shrink-0`}
+            aria-label={`Copiar ${label}`}
+          >
+            <Copy className="w-5 h-5" />
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (isLoading) {
     return (
