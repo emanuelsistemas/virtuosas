@@ -1,10 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Search, Moon, Sun } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import { supabase } from '../supabase';
 
 function RegistrationForm() {
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isRegistrationClosed, setIsRegistrationClosed] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [estadoCivil, setEstadoCivil] = useState('');
   const [formData, setFormData] = useState({
     nomeCompleto: '',
@@ -21,6 +23,26 @@ function RegistrationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSearchingCep, setIsSearchingCep] = useState(false);
   const numeroInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetchRegistrationStatus();
+  }, []);
+
+  const fetchRegistrationStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('is_registration_closed')
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      if (data) setIsRegistrationClosed(data.is_registration_closed || false);
+    } catch (error) {
+      console.error('Error fetching registration status:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const formatCPF = (value: string) => {
     return value
@@ -238,7 +260,36 @@ function RegistrationForm() {
             <h2 className="font-['Playfair_Display'] text-2xl sm:text-3xl text-pink-300">Cadastro</h2>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-400 mx-auto"></div>
+              <p className="mt-4 text-lg">Carregando...</p>
+            </div>
+          ) : isRegistrationClosed ? (
+            <div className="text-center py-8">
+              <div className="mb-8 flex justify-center">
+                <div className="p-4 rounded-full bg-red-100 inline-flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+              </div>
+              
+              <h3 className="text-2xl font-bold mb-4 bg-gradient-to-r from-pink-400 to-purple-500 text-transparent bg-clip-text">Inscrições Encerradas</h3>
+              
+              <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-pink-50'} mb-8 max-w-lg mx-auto`}>
+                <p className="text-lg mb-4">
+                  Agradecemos o seu interesse, mas as inscrições para este evento já foram encerradas.
+                </p>
+                <p className="text-base opacity-80">
+                  Entre em contato conosco para mais informações ou para ser notificado sobre futuros eventos.
+                </p>
+              </div>
+              
+
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               <div className="col-span-2">
                 <input
@@ -420,7 +471,8 @@ function RegistrationForm() {
                 </span>
               </a>
             </div>
-          </form>
+            </form>
+          )}
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Moon, Sun, Check, Clock, Users, CreditCard, Send } from 'lucide-react';
 import { supabase } from '../supabase';
@@ -17,14 +18,106 @@ interface Registration {
 function AdminPanel() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [totalRegistrations, setTotalRegistrations] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRegistrationClosed, setIsRegistrationClosed] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'verified' | 'boleto' | 'cartao' | 'boleto-enviado'>('all');
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
     fetchRegistrations();
+    fetchTotalRegistrationsCount();
+    fetchRegistrationStatus();
   }, [filterStatus, location]);
+
+  const fetchRegistrationStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('is_registration_closed')
+        .single();
+
+      if (error) {
+        // Se o erro for de tabela ou vista não existente, a criaremos
+        if (error.code === 'PGRST116' || error.message?.includes('does not exist')) {
+          console.log('Tabela settings não existe, tentando criar...');
+          await createSettingsTable();
+          return;
+        } else {
+          throw error;
+        }
+      }
+      
+      if (data) setIsRegistrationClosed(data.is_registration_closed || false);
+    } catch (error) {
+      console.error('Error fetching registration status:', error);
+      toast.error('Erro ao verificar status de inscrições');
+    }
+  };
+
+  const createSettingsTable = async () => {
+    try {
+      // Primeiro tentamos criar a tabela settings se ela não existir
+      const { error: createError } = await supabase
+        .from('settings')
+        .insert([{ id: 1, is_registration_closed: false }]);
+
+      if (!createError) {
+        setIsRegistrationClosed(false);
+        toast.success('Configurações inicializadas com sucesso');
+      } else {
+        console.error('Erro ao criar tabela settings:', createError);
+        toast.error('Erro ao criar configurações');
+      }
+    } catch (error) {
+      console.error('Erro ao criar tabela settings:', error);
+    }
+  };
+
+  const toggleRegistrationStatus = async () => {
+    try {
+      // Mostrar feedback visual de carregamento
+      toast.loading('Atualizando status das inscrições...');
+      
+      const newStatus = !isRegistrationClosed;
+      
+      const { error } = await supabase
+        .from('settings')
+        .upsert({ id: 1, is_registration_closed: newStatus }, { onConflict: 'id' });
+
+      if (error) {
+        // Se a tabela não existir, tentamos criá-la e repetir
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+          await createSettingsTable();
+          return toggleRegistrationStatus(); // tentar novamente
+        }
+        throw error;
+      }
+      
+      // Atualizando estado na interface e mostrando mensagem de sucesso
+      setIsRegistrationClosed(newStatus);
+      toast.dismiss();
+      toast.success(`Inscrições ${newStatus ? 'encerradas' : 'abertas'} com sucesso!`);
+    } catch (error) {
+      console.error('Error updating registration status:', error);
+      toast.dismiss();
+      toast.error('Erro ao atualizar status das inscrições');
+    }
+  };
+
+  const fetchTotalRegistrationsCount = async () => {
+    try {
+      const { error, count } = await supabase
+        .from('registrations')
+        .select('*', { count: 'exact', head: true });
+
+      if (error) throw error;
+      setTotalRegistrations(count || 0);
+    } catch (error) {
+      console.error('Error fetching total registrations count:', error);
+    }
+  };
 
   const fetchRegistrations = async () => {
     try {
@@ -103,25 +196,47 @@ function AdminPanel() {
           </div>
 
           {/* Contador de Cadastros */}
-          <div className={`mb-6 p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-pink-100'} flex items-center justify-between`}>
+          <div className={`mb-6 p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-pink-100'} flex items-center justify-between flex-wrap gap-4`}>
             <div className="flex items-center">
               <Users className="w-6 h-6 mr-2 text-pink-400" />
-              <span className="text-lg font-semibold">Total de Cadastros: {registrations.length}</span>
+              <div>
+                <span className="text-lg font-semibold">Total de Cadastros: {totalRegistrations}</span>
+              </div>
             </div>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)}
-              className={`px-4 py-2 text-base rounded-lg ${
-                isDarkMode ? 'bg-gray-600 text-white' : 'bg-white text-gray-900'
-              } border ${isDarkMode ? 'border-gray-500' : 'border-pink-200'} focus:outline-none focus:border-pink-400`}
-            >
-              <option value="all">Todos os Status</option>
-              <option value="pending">Pendentes</option>
-              <option value="verified">Conferidos</option>
-              <option value="boleto">Boleto</option>
-              <option value="boleto-enviado">Boleto Enviado</option>
-              <option value="cartao">Cartão</option>
-            </select>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center">
+                <button 
+                  onClick={toggleRegistrationStatus} 
+                  className={`flex items-center px-4 py-2 rounded-lg ${isRegistrationClosed ? 
+                    (isDarkMode ? 'bg-red-700 text-white' : 'bg-red-500 text-white') : 
+                    (isDarkMode ? 'bg-green-700 text-white' : 'bg-green-500 text-white')
+                  } transition-colors`}
+                >
+                  <span className="font-medium">
+                    Inscrições {isRegistrationClosed ? 'Encerradas' : 'Abertas'}
+                  </span>
+                  <div className="relative ml-2 w-10 h-5 bg-gray-200 rounded-full">
+                    <div 
+                      className={`absolute top-0.5 ${isRegistrationClosed ? 'right-0.5' : 'left-0.5'} w-4 h-4 bg-white rounded-full shadow transition-all`}
+                    />
+                  </div>
+                </button>
+              </div>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)}
+                className={`px-4 py-2 text-base rounded-lg ${
+                  isDarkMode ? 'bg-gray-600 text-white' : 'bg-white text-gray-900'
+                } border ${isDarkMode ? 'border-gray-500' : 'border-pink-200'} focus:outline-none focus:border-pink-400`}
+              >
+                <option value="all">Todos os Status</option>
+                <option value="pending">Pendentes</option>
+                <option value="verified">Conferidos</option>
+                <option value="boleto">Boleto</option>
+                <option value="boleto-enviado">Boleto Enviado</option>
+                <option value="cartao">Cartão</option>
+              </select>
+            </div>
           </div>
 
           {isLoading ? (
@@ -144,7 +259,7 @@ function AdminPanel() {
                     </tr>
                   </thead>
                   <tbody>
-                    {registrations.map((registration) => (
+                    {registrations.map((registration, index) => (
                       <tr
                         key={registration.id}
                         className={`${
@@ -153,7 +268,7 @@ function AdminPanel() {
                             : 'border-b border-pink-100 hover:bg-pink-50'
                         } transition-colors`}
                       >
-                        <td className="px-4 py-4 font-medium">{registration.sequence_number}</td>
+                        <td className="px-4 py-4 font-medium">{registrations.length - index}</td>
                         <td className="px-4 py-4">{registration.nome_completo}</td>
                         <td className="px-4 py-4">{registration.cpf}</td>
                         <td className="px-4 py-4 text-center">
@@ -192,7 +307,7 @@ function AdminPanel() {
               
               {/* Card layout for small screens */}
               <div className="md:hidden space-y-4">
-                {registrations.map((registration) => (
+                {registrations.map((registration, index) => (
                   <div 
                     key={registration.id} 
                     className={`rounded-lg p-4 ${isDarkMode ? 'bg-gray-700' : 'bg-pink-50'} shadow-sm relative`}
@@ -200,7 +315,7 @@ function AdminPanel() {
                     <div className="mb-2">
                       <div className="flex justify-between items-start">
                         <div className="flex items-center">
-                          <span className="font-medium mr-2 text-pink-400">#{registration.sequence_number}</span>
+                          <span className="font-medium mr-2 text-pink-400">#{registrations.length - index}</span>
                           <h3 className="font-semibold text-lg">{registration.nome_completo}</h3>
                         </div>
                         {registration.created_at && (
